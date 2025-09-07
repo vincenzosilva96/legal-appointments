@@ -25,6 +25,6 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/homepage.html'));
 });
 
-app.listen(3000, () => {
+app.listen(3000, "0.0.0.0",() => {
   console.log(' Server avviato su http://localhost:3000');
 });
