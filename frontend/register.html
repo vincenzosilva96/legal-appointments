@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrazione Utente</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #4facfe, #00f2fe);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .register-container {
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    input:focus {
+      border-color: #4facfe;
+      outline: none;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 6px;
+      background: #4facfe;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #3a8de0;
+    }
+    .login-link {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 0.9rem;
+    }
+    .login-link a {
+      color: #4facfe;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="register-container">
+    <h2>Registrazione</h2>
+    <form id="registerForm">
+      <label for="nome">Nome</label>
+      <input type="text" id="nome" name="nome" required>
+
+      <label for="cognome">Cognome</label>
+      <input type="text" id="cognome" name="cognome" required>
+
+      <label for="telefono">Numero di telefono</label>
+      <input type="tel" id="telefono" name="telefono" pattern="[0-9]{10}" placeholder="Es. 3331234567" required>
+
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
+
+      <label for="confermaPassword">Conferma Password</label>
+      <input type="password" id="confermaPassword" name="confermaPassword" required>
+
+      <button type="submit" class="btn">Registrati</button>
+    </form>
+
+    <div class="login-link">
+      Hai già un account? <a href="login.html">Accedi</a>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('registerForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const nome = document.getElementById('nome').value.trim();
+      const cognome = document.getElementById('cognome').value.trim();
+      const numeroT = document.getElementById('telefono').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confermaPassword = document.getElementById('confermaPassword').value;
+
+      if (password !== confermaPassword) {
+        return alert("Le password non coincidono.");
+      }
+
+      const res = await fetch('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, cognome, numeroT, email, password })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert('Registrazione completata!');
+        window.location.href = 'login.html';
+      } else {
+        alert(data.error || 'Errore durante la registrazione');
+      }
+    });
+  </script>
+
+</body>
+</html>

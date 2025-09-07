@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chi Siamo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="top-bar">
+  <div class="top-bar-content">
+    <div class="left">
+      <h2>Gestione Appuntamenti</h2>
+    </div>
+    <div class="right">
+      <span id="profiloUtente"></span>
+      <button onclick="vaiHome()">Home</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<div class="top-banner">
+  <div class="container">
+    <h1>Studio Legale Dott.Difesa Rossi</h1>
+    <p>Crediamo nella giustizia, tuteliamo i nostri clienti</p>
+    <div class="logo">
+      <img src="img/logo.png" alt="Logo" />
+    </div>
+  </div>
+</div>
+
+<main class="main-section">
+  <div class="chi-siamo-container" style="display: flex; flex-wrap: wrap; gap: 2rem; padding: 2rem; align-items: center;">
+    
+    <div class="chi-siamo-image" style="flex: 1; min-width: 300px; text-align: center; padding-top: 150px;">
+      <img src="img/chisiamo.jpg" alt="Studio Legale" style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);" />
+    </div>
+
+    <div class="chi-siamo-text" style="flex: 1; min-width: 300px;">
+      <h2 style="text-align: center; font-size: 2rem; color: #333; margin-bottom: 1rem;">Chi Siamo</h2>
+      <p style="font-size: 1.5rem; line-height: 1.6; color: #555; margin-bottom: 1rem;">
+        Lo Studio Legale Dott. Difesa Rossi è specializzato nella tutela dei diritti dei propri clienti
+        in ambito civile, penale e amministrativo. La nostra missione è garantire un'assistenza
+        legale completa e personalizzata, mettendo sempre al primo posto la soddisfazione e la sicurezza
+        del cliente. Il nostro team di professionisti altamente qualificati opera con competenza,
+        riservatezza e dedizione per ottenere i migliori risultati possibili.
+      </p>
+      <p style="font-size: 1.5rem; line-height: 1.6; color: #555;">
+        Con anni di esperienza e una profonda conoscenza delle normative, ci impegniamo a guidare
+        i nostri clienti attraverso ogni fase del processo legale, offrendo consulenza chiara e
+        strategie efficaci.
+      </p>
+    </div>
+
+  </div>
+</main>
+
+<script>
+const token = localStorage.getItem('token');
+if (token) {
+  const payloadBase64 = token.split('.')[1];
+  const payloadJson = atob(payloadBase64);
+  const payload = JSON.parse(payloadJson);
+  document.getElementById('profiloUtente').textContent =
+    payload.nome || payload.username || 'Utente';
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  window.location.href = 'login.html';
+}
+
+function vaiHome() {
+  window.location.href = 'homepage.html';
+}
+</script>
+
+</body>
+</html>

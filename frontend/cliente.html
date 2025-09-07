@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <title>Admin - Visualizza Appuntamenti</title>
+  <style>
+
+
+    .container-main {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 40px;
+      padding-top: 60px;
+      justify-content: center;
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+
+    #calendar {
+      flex: 1 1 600px;
+      min-width: 300px;
+      padding: 10px;
+      background: #f9f9f9;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-container {
+      flex: 1 1 300px;
+      padding: 10px 20px;
+      background: #f0f0f0;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-height: 85vh;
+      overflow-y: auto;
+      width: 100%;
+      max-width: 450px;
+    }
+
+    @media (max-width: 768px) {
+      .container-main {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .form-container {
+        max-width: 100%;
+        margin-top: 20px;
+      }
+    }
+
+    
+
+    #eventsContainer > div {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    #miePrenotazioni {
+      list-style: none;
+      padding-left: 0;
+      margin-top: 15px;
+    }
+
+    #miePrenotazioni li {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    #miePrenotazioni li strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 1.1em;
+      color: #333;
+    }
+
+    #miePrenotazioni a {
+      color: #3498db;
+      text-decoration: none;
+      margin-right: 10px;
+    }
+
+    #miePrenotazioni a:hover {
+      text-decoration: underline;
+    }
+
+    #miePrenotazioni button {
+      margin-top: 8px;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      background-color: #3498db;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    #miePrenotazioni button:hover {
+      background-color: #2980b9;
+    }
+
+    .btn-delete {
+      border: none;
+      background: transparent;
+      color: red;
+      cursor: pointer;
+      font-size: 1.2em;
+      vertical-align: middle;
+      margin-left: 10px;
+    }
+
+    .btn-delete:hover {
+      opacity: 0.8;
+    }
+
+    input[type="file"] {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <div class="top-bar-content">
+      <div class="left">
+        <h2>Gestione Appuntamenti</h2>
+      </div>
+      <div class="right">
+        <span id="profiloUtente"></span>
+        <button onclick="vaiHome()">Home</button>
+        <button onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </header>
+    <div class="top-banner">
+    <div class="container">
+      <h1>Studio Legale Dott.Difesa Rossi</h1>
+      <p>Crediamo nella giustizia, tuteliamo i nostri clienti </p>
+      <div class="logo">
+        <img src="img/logo.png" alt="Logo" />
+      </div>
+    </div>
+  </div>
+
+  <div class="container-main">
+    <div id="calendar"></div>
+
+    <div class="form-container">
+      <h3>Appuntamenti del giorno</h3>
+      <div id="eventsContainer">Seleziona un giorno per visualizzare gli appuntamenti.</div>
+
+      <h3 style="margin-top: 30px;">Mie Prenotazioni</h3>
+      <ul id="miePrenotazioni">
+        <li>Caricamento in corso...</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    if (token) {
+
+      const payloadBase64 = token.split('.')[1];
+      const payloadJson = atob(payloadBase64);
+      const payload = JSON.parse(payloadJson);
+
+      //console.log("Payload decodificato:", payload);
+
+      document.getElementById('profiloUtente').textContent =
+        payload.nome || payload.username || 'Utente';
+    }
+    let calendar;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        selectable: true,
+        dateClick: function (info) {
+          caricaAppuntamentiGiorno(info.dateStr);
+        },
+        events: [],
+      });
+      calendar.render();
+      caricaEventi();
+      caricaPrenotazioni(); 
+
+    });
+
+    async function caricaEventi() {
+      try {
+        const res = await fetch('http://localhost:3000/api/appointments/slots', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const slots = await res.json();
+
+        const events = slots.map(slot => {
+          if (slot.tipo_nome === 'consulenza fiscale') {
+            return {
+              id: slot.id,
+              title:  `Con. Fisc - ${slot.orario} - (${slot.disponibile})`,
+              start: slot.data.split('T')[0],
+              allDay: true,
+              color: slot.disponibile > 0 ? 'green' : 'red'
+            };
+          }
+          if (slot.tipo_nome === 'procedimento penale') {
+            return {
+              id: slot.id,
+              title:  `Proc. Pen. - ${slot.orario} - (${slot.disponibile})`,
+              start: slot.data.split('T')[0],
+              allDay: true,
+              color: slot.disponibile > 0 ? 'green' : 'red'
+            };
+          }
+          //TO DO, aggiungere nel caso altri valori se agigunti manualmente
+          // default
+          return {
+            id: slot.id,
+            title: `${slot.tipo_nome} - ${slot.orario} - (${slot.disponibile})`,
+            start: slot.data.split('T')[0],
+            allDay: true,
+            color: slot.disponibile > 0 ? 'green' : 'red'
+          };
+        });
+
+        calendar.removeAllEvents();
+        calendar.addEventSource(events);
+      } catch (err) {
+        console.error('Errore nel caricamento eventi:', err);
+      }
+    }
+
+    async function caricaAppuntamentiGiorno(dataISO) {
+      try {
+        const res = await fetch('http://localhost:3000/api/appointments/slots', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const slots = await res.json();
+        const container = document.getElementById('eventsContainer');
+        container.innerHTML = '';
+        console.log(slots)
+        const tipoFiltro = document.getElementById('filtroTipo')?.value || '';
+
+        const filtrati = slots.filter(slot => {
+          const dataSlot = new Date(slot.data).toISOString().split('T')[0]; 
+          const matchData = dataSlot === dataISO;
+          const matchTipo =
+            !tipoFiltro ||
+            slot.tipo_nome.toLowerCase() === tipoFiltro.toLowerCase() ||
+            tipoFiltro.toLowerCase() === 'tutti';
+
+          return matchData && matchTipo;
+        });
+
+        if (filtrati.length === 0) {
+          container.innerText = 'Nessuno slot disponibile per questa data.';
+          return;
+        }
+
+        filtrati.forEach(slot => {
+          const div = document.createElement('div');
+          const isDisponibile = slot.disponibile > 0;
+
+          div.style.border = '1px solid #ccc';
+          div.style.borderRadius = '8px';
+          div.style.padding = '15px';
+          div.style.margin = '10px auto';
+          div.style.width = '100%';
+          div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+          div.style.backgroundColor = '#f9f9f9';
+
+          div.innerHTML = `
+            <strong>Data:</strong> ${new Date(slot.data).toLocaleDateString()}<br>
+            <strong>Orario:</strong> ${slot.orario}<br>
+            <strong>Tipo:</strong> ${slot.tipo_nome}<br>
+            <strong>Disponibili:</strong> ${slot.disponibile}<br><br>
+            <button 
+              onclick="prenota(${slot.id}, '${slot.data}', ${slot.tipo_id})"
+              style="
+                padding: 8px 14px;
+                border: none;
+                border-radius: 5px;
+                color: white;
+                background-color: ${isDisponibile ? '#28a745' : '#dc3545'};
+                cursor: pointer;
+                font-weight: bold;
+              ">
+              ${isDisponibile ? 'Prenota' : 'Pieno - Mi metto in attesa'}
+            </button>
+          `;
+
+          container.appendChild(div);
+        });
+
+      } catch (err) {
+        console.error('Errore nel caricamento slot:', err);
+        document.getElementById('eventsContainer').innerText = 'Errore durante il caricamento.';
+      }
+    }
+
+    async function cancellaPrenotazione(idPrenotazione) {
+      if (!confirm('Sei sicuro di voler cancellare questa prenotazione?')) return;
+
+      try {
+        const res = await fetch(`http://localhost:3000/api/appointments/cancella/${idPrenotazione}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const result = await res.json();
+        alert(result.message || result.error);
+
+        if (res.ok) {
+          const dataSelezionata = calendar.getDate().toISOString().split('T')[0];
+          caricaAppuntamentiGiorno(dataSelezionata);
+          caricaEventi();
+          caricaPrenotazioni();
+        }
+      } catch (err) {
+        console.error('Errore durante la cancellazione:', err);
+        alert('Errore durante la cancellazione.');
+      }
+    }
+
+    async function prenota(slotId, slotData, slotNomeTipo) {
+      const res = await fetch('http://localhost:3000/api/appointments/prenota', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ 
+            slot_id: slotId,
+            tipo_nome: slotNomeTipo,   
+            data: slotData         
+          })
+      });
+
+      const data = await res.json();
+      alert(data.message || data.error);
+      const dataSelezionata = calendar.getDate().toISOString().split('T')[0];
+      caricaAppuntamentiGiorno(dataSelezionata);
+      caricaPrenotazioni();
+      caricaEventi();
+    }
+
+    async function caricaPrenotazioni() {
+      try {
+        const res = await fetch('http://localhost:3000/api/appointments/mie-prenotazioni', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const prenotazioni = await res.json();
+
+        const lista = document.getElementById('miePrenotazioni');
+        lista.innerHTML = '';
+
+        if (prenotazioni.length === 0) {
+          lista.innerHTML = '<li>Nessuna prenotazione trovata.</li>';
+          return;
+        }
+
+        prenotazioni.forEach(p => {
+          const elemento = document.createElement('li');
+
+          let documentiHTML = '';
+          if (p.documento) {
+            const paths = p.documento.split(';');
+            documentiHTML = paths.map((docPath, i) => {
+              return `<a href="http://localhost:3000/${docPath}" target="_blank" title="Apri documento">📄 Documento ${i + 1}</a>`;
+            }).join('<br>');
+          }
+
+          elemento.innerHTML = `
+            <strong>${new Date(p.data).toLocaleDateString()} - ${p.tipo_nome}</strong>
+            <button onclick="cancellaPrenotazione(${p.id})" class="btn-delete" title="Cancella">
+              <i class="fas fa-trash"></i>
+            </button>
+            <br>
+            <input type="file" id="file-${p.id}" multiple />
+            <button onclick="caricaDocumento(${p.id})" title="Carica documenti">📎 Carica documenti</button>
+            ${documentiHTML ? `<br>${documentiHTML}` : ''}
+          `;
+
+          lista.appendChild(elemento);
+        });
+      } catch (err) {
+        console.error('Errore nel caricamento prenotazioni:', err);
+        const lista = document.getElementById('miePrenotazioni');
+        lista.innerHTML = '<li>Errore nel caricamento delle prenotazioni.</li>';
+      }
+    }
+
+    async function caricaDocumento(idPrenotazione) {
+      const input = document.getElementById(`file-${idPrenotazione}`);
+      const files = input.files;
+      if (!files || files.length === 0) return alert("Seleziona almeno un file da caricare.");
+
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('documenti', files[i]);
+      }
+
+      try {
+        const res = await fetch(`http://localhost:3000/api/appointments/upload-documento/${idPrenotazione}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token
+          },
+          body: formData
+        });
+
+        const data = await res.json();
+        alert(data.message || data.error);
+        caricaPrenotazioni();
+      } catch (err) {
+        console.error('Errore durante il caricamento documento:', err);
+        alert('Errore durante il caricamento dei documenti.');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'homepage.html';
+    }
+
+    function vaiHome() {
+      window.location.href = 'homepage.html';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Homepage</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="top-bar">
+  <div class="top-bar-content">
+    <div class="left">
+      <h2>Gestione Appuntamenti</h2>
+    </div>
+    <div class="right">
+      <span id="profiloUtente"></span>
+      <button onclick="vaiHome()">Home</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+</header>
+  
+  <div class="top-banner">
+    <div class="container">
+      <h1>Studio Legale Dott.Difesa Rossi</h1>
+      <p>Crediamo nella giustizia, tuteliamo i nostri clienti </p>
+      <div class="logo">
+        <img src="img/logo.png" alt="Logo" />
+      </div>
+    </div>
+  </div>
+
+<main class="main-section">
+  <div class="buttons-container">
+
+<div class="button-item">
+  <button class="round-button" onclick="vaiAlChiSiamo()">
+    <img src="img/prima.png" alt="Chi siamo" class="button-img">
+  </button>
+  <p class="button-description">Chi siamo</p>
+</div>
+
+<div class="button-item">
+  <button class="round-button" onclick="vaiAllaPrenotazione()">
+    <img src="img/seconda.png" alt="Prenota appuntamento" class="button-img">
+  </button>
+  <p class="button-description">Prenota appuntamento</p>
+</div>
+
+<div class="button-item">
+  <button class="round-button"onclick="vaiAlProfilo()">
+    <img src="img/terza.png" alt="Profilo" class="button-img">
+  </button>
+  <p class="button-description">Profilo</p>
+</div>
+
+  </div>
+</main>
+
+
+</body>
+</html>
+
+<script>
+      const token = localStorage.getItem('token');
+    if (token) {
+
+      const payloadBase64 = token.split('.')[1];
+      const payloadJson = atob(payloadBase64);
+      const payload = JSON.parse(payloadJson);
+
+      //console.log("Payload decodificato:", payload);
+
+      document.getElementById('profiloUtente').textContent =
+        payload.nome || payload.username || 'Utente';
+    }
+
+function decodeJwtPayload(token) {
+  try {
+    let b64 = token.split('.')[1];
+    b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4;
+    if (pad) b64 += '='.repeat(4 - pad);
+    const json = atob(b64);
+    try { return JSON.parse(decodeURIComponent(escape(json))); } catch(e) { return JSON.parse(json); }
+  } catch (e) {
+    console.error('Errore decodeJwtPayload:', e);
+    return null;
+  }
+}
+
+async function vaiAllaPrenotazione() {
+  const token = localStorage.getItem("token");
+  //console.log('[vaiAllaPrenotazione] token:', token);
+
+  if (!token) {
+    alert("Devi essere loggato per prenotare!");
+    return window.location.replace("login.html");
+  }
+
+  const payload = decodeJwtPayload(token);
+ // console.log('[vaiAllaPrenotazione] payload:', payload);
+
+  if (!payload) {
+    localStorage.removeItem("token");
+    alert("Token non valido — effettua il login.");
+    return window.location.replace("login.html");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp && payload.exp <= now) {
+    alert("Sessione scaduta. Effettua di nuovo il login.");
+    localStorage.removeItem("token");
+    return window.location.replace("login.html");
+  }
+
+  const roleValue = payload.role ?? payload.ruolo ?? payload.roles ?? payload.role_name ?? payload.admin ?? payload.isAdmin;
+  let isAdmin = false;
+  if (Array.isArray(roleValue)) {
+    isAdmin = roleValue.some(r => String(r).toLowerCase() === 'admin');
+  } else {
+    isAdmin = String(roleValue ?? '').toLowerCase() === 'admin' || roleValue === true;
+  }
+
+  console.log('[vaiAllaPrenotazione] roleValue:', roleValue, 'isAdmin:', isAdmin);
+
+  if (isAdmin) {
+    return window.location.replace("admin.html");
+  } else {
+    return window.location.replace("cliente.html");
+  }
+}
+
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
+  function vaiAlProfilo() {
+    window.location.href = "profilo.html";
+  }
+
+      function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'login.html';
+    }
+
+    function vaiHome() {
+      window.location.href = 'homepage.html'; 
+    }
+
+   function vaiAlChiSiamo() {
+    window.location.href = "chisiamo.html";
+  }
+</script>

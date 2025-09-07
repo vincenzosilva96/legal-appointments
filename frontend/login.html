@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #4facfe, #00f2fe);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-container {
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    input:focus {
+      border-color: #4facfe;
+      outline: none;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 6px;
+      background: #4facfe;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #3a8de0;
+    }
+    .register-link {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 0.9rem;
+    }
+    .register-link a {
+      color: #4facfe;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <h2>Accedi</h2>
+    <form id="loginForm">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
+
+      <button type="submit" class="btn">Accedi</button>
+    </form>
+
+    <div class="register-link">
+      Non hai un account? <a href="register.html">Registrati</a>
+    </div>
+  </div>
+
+  <script>
+    function decodeJwtPayload(token) {
+      try {
+        let b64 = token.split('.')[1];
+        b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+        const pad = b64.length % 4;
+        if (pad) b64 += '='.repeat(4 - pad);
+        const json = atob(b64);
+        try { 
+          return JSON.parse(decodeURIComponent(escape(json))); 
+        } catch(e) { 
+          return JSON.parse(json); 
+        }
+      } catch (e) {
+        console.error('Errore decodeJwtPayload:', e);
+        return null;
+      }
+    }
+
+    function vaiAllaPrenotazione() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const payload = decodeJwtPayload(token);
+      if (!payload) {
+        localStorage.removeItem("token");
+        return;
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      if (payload.exp && payload.exp <= now) {
+        localStorage.removeItem("token");
+        return;
+      }
+
+      const roleValue = payload.role ?? payload.ruolo ?? payload.roles ?? payload.role_name ?? payload.admin ?? payload.isAdmin;
+      let isAdmin = false;
+      if (Array.isArray(roleValue)) {
+        isAdmin = roleValue.some(r => String(r).toLowerCase() === 'admin');
+      } else {
+        isAdmin = String(roleValue ?? '').toLowerCase() === 'admin' || roleValue === true;
+      }
+
+      if (isAdmin) {
+        window.location.replace("admin.html");
+      } else {
+        window.location.replace("cliente.html");
+      }
+    }
+
+    // Controllo token all'apertura
+    vaiAllaPrenotazione();
+
+    // Login
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.token) {
+          localStorage.setItem("token", data.token);
+          vaiAllaPrenotazione();
+        } else {
+          alert(data.error || "Credenziali non valide");
+        }
+      } catch (err) {
+        alert("Errore di connessione al server");
+      }
+    });
+
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+  </script>
+
+</body>
+</html>

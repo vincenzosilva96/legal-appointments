@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profilo Utente</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    * { box-sizing: border-box; }
+
+
+    .container-main {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 40px;
+      justify-content: center;
+      margin-top: 80px;
+      margin-left: 60px;
+      margin-right: 60px;
+    }
+
+    .card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-container {
+      flex: 1 1 300px;
+    }
+
+    .prenotazioni-container {
+      flex: 1 1 300px;
+    }
+
+    h3 { margin-top: 0; }
+
+    label { display: block; margin-top: 10px; font-weight: bold; }
+
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    input:focus { border-color: #4facfe; outline: none; }
+
+    .btn-primary {
+      background: #4facfe;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .btn-primary:hover { background: #3a8de0; }
+
+    .btn-delete {
+      background: red;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .prenotazione-card {
+      background: #fdfdfd;
+      border: 1px solid #e0e0e0;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
+    .prenotazione-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .doc-section {
+      margin-top: 10px;
+      background: #f7f7f7;
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    .documenti-container {
+      flex: 1 1 300px;
+    }
+
+    #listaDocumenti a {
+      display: block;
+      margin-bottom: 8px;
+      color: #4facfe;
+      text-decoration: none;
+    }
+
+    #listaDocumenti a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body onload="caricaProfilo(); caricaPrenotazioni(); caricaDocumentiProfilo();">
+
+<header class="top-bar">
+  <div class="top-bar-content">
+    <div class="left">
+      <h2>Gestione Appuntamenti</h2>
+    </div>
+    <div class="right">
+      <span id="profiloUtente"></span>
+      <button onclick="vaiHome()">Home</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+</header>
+  
+  <div class="top-banner">
+    <div class="container">
+      <h1>Studio Legale Dott.Difesa Rossi</h1>
+      <p>Crediamo nella giustizia, tuteliamo i nostri clienti </p>
+      <div class="logo">
+        <img src="img/logo.png" alt="Logo" />
+      </div>
+    </div>
+  </div>
+
+
+<main class="container-main">
+  <!-- Informazioni Utente -->
+  <div class="form-container card">
+    <h3>Informazioni Utente</h3>
+    <form id="formProfilo" onsubmit="aggiornaProfilo(event)">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email">
+
+      <label for="telefono">Telefono</label>
+      <input type="tel" id="telefono" name="telefono" disabled>
+
+      <label for="nome">Nome</label>
+      <input type="text" id="nome" name="nome" disabled>
+
+      <label for="cognome">Cognome</label>
+      <input type="text" id="cognome" name="cognome" disabled>
+
+      <button type="submit" class="btn-primary">Aggiorna Email</button>
+    </form>
+
+    <hr>
+
+    <h4>Cambia Password</h4>
+    <form id="formPassword" onsubmit="aggiornaPassword(event)">
+      <label for="password">Nuova Password</label>
+      <input type="password" id="password" name="password" placeholder="Lascia vuoto per non cambiare">
+      <button type="submit" class="btn-primary">Aggiorna Password</button>
+    </form>
+  </div>
+
+  <!-- Documenti -->
+  <div class="documenti-container card">
+    <h3>I miei documenti</h3>
+    <div id="listaDocumenti">
+      <p>Nessun documento caricato.</p>
+    </div>
+  </div>
+
+  <!-- Prenotazioni -->
+  <div class="prenotazioni-container card">
+    <h3>Le mie prenotazioni</h3>
+    <div id="miePrenotazioni">Caricamento...</div>
+  </div>
+</main>
+
+
+<script>
+  const token = localStorage.getItem("token");
+  if (!token) {
+    alert("Devi effettuare il login per accedere al profilo");
+    window.location.href = "login.html";
+  }
+
+  function decodeJwtPayload(token) {
+    try {
+      let b64 = token.split('.')[1];
+      b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = b64.length % 4;
+      if (pad) b64 += '='.repeat(4 - pad);
+      const json = atob(b64);
+      return JSON.parse(decodeURIComponent(escape(json)));
+    } catch (e) {
+      console.error('Errore decodeJwtPayload:', e);
+      return null;
+    }
+  }
+
+  function vaiHome() { window.location.href = "homepage.html"; }
+  function logout() { localStorage.removeItem("token"); window.location.href = "login.html"; }
+
+  function caricaProfilo() {
+    const payload = decodeJwtPayload(token);
+    if (payload) {
+      document.getElementById("email").value = payload.email || '';
+      document.getElementById("telefono").value = payload.numeroT || '';
+      document.getElementById("nome").value = payload.nome || '';
+      document.getElementById("cognome").value = payload.cognome || '';
+      document.getElementById("profiloUtente").innerText = payload.nome || "Utente";
+    }
+  }
+
+  async function aggiornaProfilo(e) {
+    e.preventDefault();
+    const email = document.getElementById("email").value.trim();
+    try {
+      const res = await fetch("http://localhost:3000/api/utente/aggiorna-email", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+    } catch {
+      alert("Errore durante l'aggiornamento del profilo");
+    }
+  }
+
+  async function aggiornaPassword(e) {
+    e.preventDefault();
+    const password = document.getElementById("password").value.trim();
+    if (!password) return alert("Inserisci una nuova password");
+    try {
+      const res = await fetch("http://localhost:3000/api/appointments/aggiorna-password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+    } catch {
+      alert("Errore durante l'aggiornamento della password");
+    }
+  }
+
+  async function caricaPrenotazioni() {
+    try {
+      const res = await fetch('http://localhost:3000/api/appointments/mie-prenotazioni', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const prenotazioni = await res.json();
+      const lista = document.getElementById('miePrenotazioni');
+      lista.innerHTML = '';
+
+      if (!prenotazioni.length) {
+        lista.innerHTML = '<div>Nessuna prenotazione trovata.</div>';
+        return;
+      }
+
+      prenotazioni.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'prenotazione-card';
+        let documentiHTML = '';
+        if (p.documento) {
+          const paths = p.documento.split(';');
+          documentiHTML = paths.map((docPath, i) => `<a href="http://localhost:3000/${docPath}" target="_blank">📄 Documento ${i + 1}</a>`).join('<br>');
+        }
+        card.innerHTML = `
+          <div class="prenotazione-header">
+            <strong>${new Date(p.data).toLocaleDateString()} - ${p.tipo_nome}</strong>
+            <button onclick="cancellaPrenotazione(${p.id})" class="btn-delete">🗑</button>
+          </div>
+          <div class="doc-section">
+            <input type="file" id="file-${p.id}" multiple />
+            <button onclick="caricaDocumento(${p.id})" class="btn-primary">📎 Carica documenti</button>
+            ${documentiHTML ? `<br>${documentiHTML}` : ''}
+          </div>
+        `;
+        lista.appendChild(card);
+      });
+    } catch (err) {
+      document.getElementById('miePrenotazioni').innerHTML = '<div>Errore nel caricamento delle prenotazioni.</div>';
+    }
+  }
+
+  async function caricaDocumento(idPrenotazione) {
+    const input = document.getElementById(`file-${idPrenotazione}`);
+    const files = input.files;
+    if (!files.length) return alert("Seleziona almeno un file.");
+    const formData = new FormData();
+    [...files].forEach(file => formData.append('documenti', file));
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/appointments/upload-documento/${idPrenotazione}`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: formData
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+      caricaPrenotazioni();
+    } catch {
+      alert('Errore durante il caricamento dei documenti.');
+    }
+  }
+
+  async function cancellaPrenotazione(idPrenotazione) {
+    if (!confirm("Sei sicuro di voler cancellare questa prenotazione?")) return;
+      try {
+        const res = await fetch(`http://localhost:3000/api/appointments/cancella/${idPrenotazione}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      const data = await res.json();
+      alert(data.message || data.error);
+      caricaPrenotazioni();
+    } catch {
+      alert("Errore durante la cancellazione");
+    }
+  }
+
+
+
+async function caricaDocumentiProfilo() {
+  try {
+    const res = await fetch('http://localhost:3000/api/appointments/utente/documenti', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const docs = await res.json();
+    const lista = document.getElementById('listaDocumenti');
+    lista.innerHTML = '';
+
+    if (!docs.length) {
+      lista.innerHTML = '<p>Nessun documento caricato.</p>';
+      return;
+    }
+
+    docs.forEach(slot => {
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = `<h4>Slot: ${slot.data} - ${slot.orario}</h4>`;
+      
+      slot.documenti.forEach((docUrl, i) => {
+        const link = document.createElement('a');
+        link.href = docUrl;
+        link.target = "_blank";
+        link.innerText = `📄 Documento ${i + 1}`;
+        wrapper.appendChild(link);
+        wrapper.appendChild(document.createElement('br'));
+      });
+
+      lista.appendChild(wrapper);
+    });
+  } catch (err) {
+    console.error('Errore caricamento documenti:', err);
+    document.getElementById('listaDocumenti').innerHTML = '<p>Errore caricamento documenti.</p>';
+  }
+}
+
+
+
+</script>
+
+</body>
+</html>

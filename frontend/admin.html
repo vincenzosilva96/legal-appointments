@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <title>Admin - Gestione Appuntamenti</title>
+ <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    .container-main {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 40px;
+      justify-content: center;
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+
+    #calendar {
+      flex: 1 1 600px; 
+      min-width: 300px;
+      padding: 10px;
+      background: #f9f9f9;
+      border-radius: 10px;
+    }
+
+    .form-container {
+      flex: 1 1 300px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .container-main {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+    }
+
+
+  #eventsContainer div {
+  background: #fff;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+  </style>
+</head>
+
+<body onload="caricaTipi()">
+<header class="top-bar">
+  <div class="top-bar-content">
+    <div class="left">
+      <h2>Gestione Appuntamenti</h2>
+    </div>
+    <div class="right">
+      <span id="profiloUtente">Admin</span>
+      <button onclick="vaiHome()">Home</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+</header>
+  
+  <div class="top-banner">
+    <div class="container">
+      <h1>Studio Legale Dott.Difesa Rossi</h1>
+      <p>Crediamo nella giustizia, tuteliamo i nostri clienti </p>
+      <div class="logo">
+        <img src="img/logo.png" alt="Logo" />
+      </div>
+    </div>
+  </div>
+
+  <h1>Area Admin - Aggiungi Slot</h1>
+
+  <div class="container-main">
+
+  <div id="calendar"></div>
+
+  <div class="form-container">
+    <h3>Aggiungi Appuntamento</h3>
+    <label for="tipoSelect">Tipo di Appuntamento:</label>
+    <select id="tipoSelect"></select>
+
+    <label for="dataSlot">Data:</label>
+    <input type="date" id="dataSlot" />
+
+    <label for="oraSlot">Orario:</label>
+    <input type="time" id="oraSlot" />
+
+    <button onclick="aggiungiSlot()">Salva Appuntamento</button>
+    <p id="esitoSlot"></p>
+
+    <hr>
+
+    <h3>Appuntamenti del giorno</h3>
+    <div id="eventsContainer">Seleziona un giorno per visualizzare gli appuntamenti.</div>
+  </div>
+</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+        window.location.href = 'index.html';
+      } else {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload.ruolo !== 'admin') {
+            window.location.href = 'homepage.html';
+          }
+        } catch {
+          window.location.href = 'index.html';
+        }
+      }
+
+    async function caricaTipi() {
+      try {
+        const res = await fetch('http://localhost:3000/api/appointments/tipi', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.status === 403) {
+          alert('Accesso negato. Solo per admin.');
+          return;
+        }
+
+        const tipi = await res.json();
+        console.log('Tipi caricati:', tipi);
+
+        const select = document.getElementById('tipoSelect');
+        select.innerHTML = '';
+
+        if (Array.isArray(tipi)) {
+          tipi.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t.id;
+            option.textContent = t.nome;
+            select.appendChild(option);
+          });
+        } else {
+          document.getElementById('esitoSlot').innerText = tipi.error || 'Errore nel caricamento tipi.';
+        }
+      } catch (err) {
+        console.error('Errore caricamento tipi:', err);
+        document.getElementById('esitoSlot').innerText = 'Errore di rete.';
+      }
+    }
+
+    async function aggiungiSlot() {
+      const tipo_id = document.getElementById('tipoSelect').value;
+      const data = document.getElementById('dataSlot').value;
+      //const numero_slot = document.getElementById('numeroSlot').value;
+      const orario = document.getElementById('oraSlot').value;
+      //console.log(tipo_id,data, orario )
+      if (!data  || !tipo_id || !orario) {
+        document.getElementById('esitoSlot').innerText = 'Completa tutti i campi.';
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:3000/api/appointments/add-slot', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ tipo_id, data, orario })
+        });
+
+        const result = await res.json();
+        console.log(result )
+        document.getElementById('esitoSlot').innerText = result.message || result.error;
+
+        if (res.ok) {
+          caricaEventi();
+        }
+      } catch (err) {
+        console.error('Errore durante l’aggiunta:', err);
+        document.getElementById('esitoSlot').innerText = 'Errore nella richiesta.';
+      }
+    }
+
+    let calendar; // variabile globale per calendario
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        selectable: true,
+        dateClick: function(info) {
+          const day = info.dateStr;
+          document.getElementById('dataSlot').value = day;
+          caricaAppuntamentiGiorno(day);
+        },
+        events: [], 
+      });
+      calendar.render();
+
+      caricaEventi(); 
+    });
+
+    async function caricaEventi() {
+      try {
+        const res = await fetch('http://localhost:3000/api/appointments/slots', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          console.error('Errore nel caricamento eventi:', res.status);
+          return;
+        }
+
+        const slots = await res.json();
+
+      const events = slots.map(slot => {
+          if (slot.tipo_nome === 'consulenza fiscale') {
+            return {
+              id: slot.id,
+              title:  `Con. Fisc - ${slot.orario} - (${slot.disponibile})`,
+              start: slot.data.split('T')[0],
+              allDay: true,
+              color: slot.disponibile > 0 ? 'green' : 'red'
+            };
+          }
+          if (slot.tipo_nome === 'procedimento penale') {
+            return {
+              id: slot.id,
+              title:  `Proc. Pen. - ${slot.orario} - (${slot.disponibile})`,
+              start: slot.data.split('T')[0],
+              allDay: true,
+              color: slot.disponibile > 0 ? 'green' : 'red'
+            };
+          }
+          //VINCE TODO implementare altri casi
+          // default
+          return {
+            id: slot.id,
+            title: `${slot.tipo_nome} - ${slot.orario} - (${slot.disponibile})`,
+            start: slot.data.split('T')[0],
+            allDay: true,
+            color: slot.disponibile > 0 ? 'green' : 'red'
+          };
+        });
+
+        calendar.removeAllEvents();
+        calendar.addEventSource(events);
+
+      } catch (err) {
+        console.error('Errore nel caricamento eventi:', err);
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'homepage.html';
+    }
+
+    function vaiHome() {
+      window.location.href = 'homepage.html'; 
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const utente = localStorage.getItem('username') || 'Admin';
+      document.getElementById('profiloUtente').innerText = utente;
+    });
+
+    async function caricaAppuntamentiGiorno(dataISO) {
+      try {
+        const res = await fetch(`http://localhost:3000/api/appointments/day/${dataISO}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const appuntamenti = await res.json();
+        console.log(appuntamenti)
+        const container = document.getElementById('eventsContainer');
+        container.innerHTML = '';
+
+        if (!Array.isArray(appuntamenti) || appuntamenti.length === 0) {
+          container.innerText = 'Nessun appuntamento per questa data.';
+          return;
+        }
+
+        appuntamenti.forEach(app => {
+          const div = document.createElement('div');
+          const orario = app.orario ? app.orario.slice(0, 5) : 'N/D'; // formato HH:MM
+          console.log(app);
+          div.innerHTML = `
+            <strong>${app.tipo_nome}</strong><br>
+            Utente: ${app.utente_nome || 'N/D'}<br>
+            Ora: ${orario}
+            <button onclick="cancellaPrenotazione(${app.slot_id})" class="btn-delete" title="Cancella">
+              <i class="fas fa-trash"></i>
+            </button>
+            <hr>
+          `;
+          container.appendChild(div);
+        });
+
+      } catch (err) {
+        console.error('Errore caricamento appuntamenti:', err);
+        document.getElementById('eventsContainer').innerText = 'Errore durante il caricamento.';
+      }
+    }
+
+    async function cancellaPrenotazione(idPrenotazione) {
+              console.log(idPrenotazione)
+  if (!confirm('Sei sicuro di voler cancellare questa prenotazione?')) return;
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/appointments/delete/${idPrenotazione}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const result = await res.json();
+    alert(result.message || result.error);
+
+    if (res.ok) {
+      caricaAppuntamentiGiorno(document.getElementById('dataSlot').value);
+      caricaEventi(); 
+    }
+  } catch (err) {
+    console.error('Errore durante la cancellazione:', err);
+    alert('Errore durante la cancellazione.');
+  }
+}
+
+  </script>
+</body>
+</html>
