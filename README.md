@@ -47,8 +47,11 @@ Preview
 # Configuration
 
 To install do "npm install" and install Nginx for the server.
+
 1)delete the fetch on the project from the "localhost" endpoint 
+
 2)set the configuration on nginx with "sudo nano /etc/nginx/nginx.conf"
+
 3)set on "server: server {
     listen 80;
     server_name <public-ip>;
@@ -70,4 +73,5 @@ To install do "npm install" and install Nginx for the server.
         proxy_cache_bypass $http_upgrade;
     }
 }
+
 4) go to public ip
